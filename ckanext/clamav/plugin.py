@@ -4,12 +4,14 @@ import ckan.plugins as p
 import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
 
-from . import utils
+from . import utils, config
+from .job import job_virus_scan
 
 
 class ClamavPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.IUploader, inherit=True)
+    p.implements(p.IResourceController, inherit=True)
 
     # IConfigurer
 
@@ -21,6 +23,8 @@ class ClamavPlugin(p.SingletonPlugin):
     # IUploader
 
     def get_resource_uploader(self, data_dict: dict[str, Any]):
+        if not config.is_async():
+            return
         if not data_dict.get("upload"):
             return
 
@@ -29,3 +33,18 @@ class ClamavPlugin(p.SingletonPlugin):
     def get_uploader(self, upload_to: str,
                      old_filename: Optional[str]):
         return
+
+    # IResourceController
+    def after_resource_create(self, context, resource):
+        self._enqueue_if_file(resource)
+
+    def after_resource_update(self, context, resource):
+        self._enqueue_if_file(resource)
+
+    def _enqueue_if_file(self, resource):
+        if config.is_async() and resource.get('url_type') == 'upload':
+            # Enqueue the task
+            toolkit.enqueue_job(fn=job_virus_scan,
+                                title=u"Clamav upload - Virus scan id: {}, name: {}".format(resource.id, resource.name),
+                                queue=config.job_queue(),
+                                args=[resource.id])

@@ -28,6 +28,17 @@ CLAMAV_CONF_SOCK_TCP_HOST: str = "ckanext.clamav.tcp.host"
 CLAMAV_CONF_SOCK_TCP_PORT: str = "ckanext.clamav.tcp.port"
 CLAMAV_CONF_CONN_TIMEOUT: str = "ckanext.clamav.timeout"
 CLAMAV_CONF_CONN_TIMEOUT_DF: int = 60
+CLAMAV_CONF_ASYNC_SCAN: str = "ckanext.clamav.async_scan"
+CLAMAV_CONF_ASYNC_JOB_QUEUE: str = "ckanext.clamav.async_job_queue"
+
+
+def is_async() -> bool:
+    """ Scan direct or via async job queue, default direct """
+    return tk.asbool(tk.config.get(CLAMAV_CONF_ASYNC_SCAN, False))  # type: ignore[attr-defined]
+
+
+def job_queue() -> str:
+    return tk.config.get(CLAMAV_CONF_ASYNC_JOB_QUEUE, u'default')  # type: ignore[attr-defined]
 
 
 def upload_unscanned() -> bool:
